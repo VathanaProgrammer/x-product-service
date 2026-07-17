@@ -1,5 +1,6 @@
 package com.VyntraProductService.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -38,5 +39,6 @@ public class ProductCategory {
     private Integer status;
 
     @OneToMany(mappedBy = "category")
+    @JsonIgnore
     private List<Product> products;
 }

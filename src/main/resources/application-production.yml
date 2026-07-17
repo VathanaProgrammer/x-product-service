@@ -1,0 +1,18 @@
+spring:
+  config:
+    activate:
+      on-profile: production
+  datasource:
+    url: ${PRODUCT_DB_URL}
+    username: ${PRODUCT_DB_USERNAME}
+    password: ${PRODUCT_DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${PRODUCT_JPA_DDL_AUTO:validate}
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.MySQLDialect
