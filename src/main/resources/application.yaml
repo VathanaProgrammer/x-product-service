@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: Vyntra-Product-Service
+    name: X-Product-Service
   profiles:
     default: local
   data:
@@ -14,8 +14,8 @@ spring:
 # Shared cache settings from com.vyntra:x-redis
 vyntra:
   redis:
-    enabled: ${VYNTRA_REDIS_ENABLED:true}
-    key-prefix: vyntra
+    enabled: ${X_REDIS_ENABLED:true}
+    key-prefix: x
     default-ttl: 10m
     caches:
       product-by-id: 15m
