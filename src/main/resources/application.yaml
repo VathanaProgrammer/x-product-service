@@ -6,6 +6,20 @@ spring:
     name: Vyntra-Product-Service
   profiles:
     default: local
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+# Shared cache settings from com.vyntra:vyntra-redis
+vyntra:
+  redis:
+    enabled: ${VYNTRA_REDIS_ENABLED:true}
+    key-prefix: vyntra
+    default-ttl: 10m
+    caches:
+      product-by-id: 15m
+      products: 5m
 
 jwt:
   secret: ${JWT_SECRET}

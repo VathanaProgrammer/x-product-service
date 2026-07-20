@@ -1,0 +1,10 @@
+# Unit/integration tests do not require a live Redis instance.
+vyntra:
+  redis:
+    enabled: false
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
