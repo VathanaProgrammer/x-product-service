@@ -47,8 +47,8 @@
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.vyntra</groupId>
-			<artifactId>vyntra-redis</artifactId>
+			<groupId>com.x</groupId>
+			<artifactId>x-redis</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 
