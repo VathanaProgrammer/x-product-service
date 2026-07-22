@@ -1,5 +1,5 @@
 # Unit/integration tests do not require a live Redis instance.
-vyntra:
+x:
   redis:
     enabled: false
 
