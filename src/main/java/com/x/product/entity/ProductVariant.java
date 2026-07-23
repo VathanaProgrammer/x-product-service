@@ -26,17 +26,29 @@ public class ProductVariant {
     @Column(unique = true)
     private String sku;
 
+    @Column(name = "variant_name")
+    private String variantName;
+
+    private String barcode;
+
+    @Column(name = "is_default")
+    private Boolean isDefault = false;
+
     @Column(columnDefinition = "TEXT")
     private String image;
 
     @Column(name = "cost_price")
     private BigDecimal costPrice;
 
-    @Column(name = "sale_price")
-    private BigDecimal salePrice;
+    @Column(name = "pos_price")
+    private BigDecimal posPrice;
+
+    @Column(name = "online_price")
+    private BigDecimal onlinePrice;
 
     @Column(name = "stock_alert_qty")
     private Integer stockAlertQty;
 
     private Integer status;
+
 }

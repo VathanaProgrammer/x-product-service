@@ -11,7 +11,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "products")
+@Table(
+        name = "products",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_product_store_code",
+                columnNames = {"store_id", "product_code"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -23,14 +27,28 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "business_id")
-    private Long businessId;
+    @Column(name = "store_id", nullable = false)
+    private Long storeId;
 
-    @Column(name = "product_code", unique = true)
+    @Column(name = "product_code")
     private String productCode;
 
     @Column(name = "product_name")
     private String productName;
+
+    /**
+     * ISO 4217 currency code owned by the catalog product. Every variant and
+     * every channel listing for this product uses this currency.
+     */
+    @Column(name = "currency_code", length = 3)
+    private String currencyCode;
+
+    /**
+     * 1 = POS, 2 = ONLINE, 3 = BOTH. All variants inherit this availability.
+     */
+    @Convert(converter = ProductSaleChannelConverter.class)
+    @Column(name = "sales_channel")
+    private ProductSaleChannel salesChannel;
 
     @Column(name = "short_name")
     private String shortName;
@@ -95,7 +113,11 @@ public class Product {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
+    /**
+     * A product is catalog metadata. Every sellable item is a variant, including
+     * the single default variant created for products without options.
+     */
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductVariant> variants;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
