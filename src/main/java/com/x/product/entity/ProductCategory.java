@@ -21,8 +21,8 @@ public class ProductCategory {
     @Column(name = "business_id")
     private Long businessId;
 
-    @Column(name = "parent_id")
-    private Long parentId;
+    @Column(name = "category_id")
+    private Long categoryId;
 
     @Column(name = "category_code")
     private String categoryCode;
