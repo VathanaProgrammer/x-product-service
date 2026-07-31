@@ -18,6 +18,9 @@ spring:
       ddl-auto: update
     show-sql: false
 
+jwt:
+  secret: ${JWT_SECRET}
+
 x:
   redis:
-    enabled: false
+    enabled: ${X_REDIS_ENABLED:true}

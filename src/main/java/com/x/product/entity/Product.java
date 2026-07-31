@@ -53,8 +53,6 @@ public class Product {
     @Column(name = "short_name")
     private String shortName;
 
-    private String barcode;
-
     @Column(name = "qr_code")
     private String qrCode;
 
@@ -79,18 +77,6 @@ public class Product {
 
     @Column(columnDefinition = "TEXT")
     private String description;
-
-    @Column(name = "cost_price")
-    private BigDecimal costPrice;
-
-    @Column(name = "sale_price")
-    private BigDecimal salePrice;
-
-    @Column(name = "wholesale_price")
-    private BigDecimal wholesalePrice;
-
-    @Column(name = "min_price")
-    private BigDecimal minPrice;
 
     private BigDecimal weight;
 
@@ -120,6 +106,6 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductVariant> variants;
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductImage> images;
 }

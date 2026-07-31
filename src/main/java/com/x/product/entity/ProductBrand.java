@@ -3,6 +3,9 @@ package com.x.product.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Entity
 @Table(name = "brands")
 @Getter
@@ -18,6 +21,12 @@ public class ProductBrand {
     @Column(name = "business_id")
     private Long businessId;
 
+    @ElementCollection
+    @CollectionTable(name = "brand_stores", joinColumns = @JoinColumn(name = "brand_id"))
+    @Column(name = "store_id")
+    @Builder.Default
+    private Set<Long> storeIds = new HashSet<>();
+
     @Column(name = "brand_code")
     private String brandCode;
 
@@ -27,5 +36,5 @@ public class ProductBrand {
     @Column(columnDefinition = "TEXT")
     private String logo;
 
-    private Integer status;
+    private String status;
 }

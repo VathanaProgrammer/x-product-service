@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "categories")
@@ -21,6 +23,12 @@ public class ProductCategory {
     @Column(name = "business_id")
     private Long businessId;
 
+    @ElementCollection
+    @CollectionTable(name = "category_stores", joinColumns = @JoinColumn(name = "category_id"))
+    @Column(name = "store_id")
+    @Builder.Default
+    private Set<Long> storeIds = new HashSet<>();
+
     @Column(name = "category_id")
     private Long categoryId;
 
@@ -36,7 +44,7 @@ public class ProductCategory {
     @Column(name = "sort_order")
     private Integer sortOrder;
 
-    private Integer status;
+    private String status;
 
     @OneToMany(mappedBy = "category")
     @JsonIgnore

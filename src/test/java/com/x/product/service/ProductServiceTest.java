@@ -4,6 +4,7 @@ import com.x.product.entity.Product;
 import com.x.product.entity.ProductSaleChannel;
 import com.x.product.entity.ProductVariant;
 import com.x.product.repository.ProductRepository;
+import com.x.product.repository.ProductVariantRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,7 +23,7 @@ class ProductServiceTest {
     void getProductByIdReturnsNotFoundWhenProductDoesNotExist() {
         ProductRepository repository = mock(ProductRepository.class);
         when(repository.findById(99L)).thenReturn(Optional.empty());
-        ProductService service = new ProductService(repository);
+        ProductService service = new ProductService(repository, mock(ProductVariantRepository.class));
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
@@ -32,7 +33,7 @@ class ProductServiceTest {
     }
 
     @Test
-    void createProductAddsDefaultSellableVariantWhenNoneIsProvided() {
+    void createProductRejectsMissingVariant() {
         ProductRepository repository = mock(ProductRepository.class);
         Product product = Product.builder()
                 .storeId(1L)
@@ -40,20 +41,11 @@ class ProductServiceTest {
                 .productName("Notebook")
                 .currencyCode("khr")
                 .salesChannel(ProductSaleChannel.POS)
-                .salePrice(new BigDecimal("2.50"))
                 .build();
-        when(repository.save(product)).thenReturn(product);
-
-        Product saved = new ProductService(repository).createProduct(product);
-
-        assertEquals(1, saved.getVariants().size());
-        ProductVariant variant = saved.getVariants().get(0);
-        assertEquals("Default", variant.getVariantName());
-        assertEquals("NOTEBOOK-001", variant.getSku());
-        assertEquals("KHR", saved.getCurrencyCode());
-        assertEquals(true, variant.getIsDefault());
-        assertEquals(saved, variant.getProduct());
-        assertEquals(new BigDecimal("2.50"), variant.getPosPrice());
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> new ProductService(repository, mock(ProductVariantRepository.class)).createProduct(product));
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
     }
 
     @Test
@@ -61,6 +53,7 @@ class ProductServiceTest {
         ProductRepository repository = mock(ProductRepository.class);
         ProductVariant variant = ProductVariant.builder()
                 .sku("SHIRT-BLUE-M")
+                .barcode("1234567890123")
                 .posPrice(new BigDecimal("15.00"))
                 .onlinePrice(new BigDecimal("17.00"))
                 .build();
@@ -73,7 +66,7 @@ class ProductServiceTest {
                 .build();
         when(repository.save(product)).thenReturn(product);
 
-        new ProductService(repository).createProduct(product);
+        new ProductService(repository, mock(ProductVariantRepository.class)).createProduct(product);
 
         assertEquals(true, variant.getIsDefault());
         assertEquals(product, variant.getProduct());
@@ -86,12 +79,11 @@ class ProductServiceTest {
                 .storeId(1L)
                 .productCode("NOTEBOOK-001")
                 .salesChannel(ProductSaleChannel.POS)
-                .salePrice(new BigDecimal("2.50"))
                 .build();
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> new ProductService(repository).createProduct(product));
+                () -> new ProductService(repository, mock(ProductVariantRepository.class)).createProduct(product));
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
     }
@@ -103,12 +95,14 @@ class ProductServiceTest {
                 .productCode("NOTEBOOK-001")
                 .currencyCode("KHR")
                 .salesChannel(ProductSaleChannel.POS)
-                .salePrice(new BigDecimal("2.50"))
+                .variants(java.util.List.of(ProductVariant.builder()
+                        .sku("NOTEBOOK-001").barcode("100001")
+                        .posPrice(new BigDecimal("2.50")).build()))
                 .build();
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> new ProductService(repository).createProduct(product));
+                () -> new ProductService(repository, mock(ProductVariantRepository.class)).createProduct(product));
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
     }

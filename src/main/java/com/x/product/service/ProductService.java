@@ -3,34 +3,47 @@ package com.x.product.service;
 import com.x.product.entity.Product;
 import com.x.product.entity.ProductSaleChannel;
 import com.x.product.entity.ProductVariant;
+import com.x.product.entity.ProductImage;
 import com.x.product.repository.ProductRepository;
+import com.x.product.repository.ProductVariantRepository;
+import com.x.product.dto.ProductVariantSaleResponse;
 import com.x.redis.cache.CacheNames;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.Currency;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Set;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ProductService {
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
 
     /**
      * List cache — short TTL. Evicted on any product write.
      */
-    @Cacheable(cacheNames = CacheNames.PRODUCTS, key = "'all'")
+    @Cacheable(cacheNames = CacheNames.PRODUCTS, key = "#storeId + ':' + #page + ':' + #size")
     @Transactional(readOnly = true)
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
+    public Page<Product> getAllProducts(Long storeId, int page, int size) {
+        validateStoreId(storeId);
+        return productRepository.findAllByStoreId(storeId,
+                PageRequest.of(page, size, Sort.by("createdAt").descending()));
     }
 
     /**
@@ -43,6 +56,23 @@ public class ProductService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     }
 
+    @Transactional(readOnly = true)
+    public ProductVariantSaleResponse getSellableVariant(Long id) {
+        ProductVariant variant = productVariantRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product variant not found"));
+        Product product = variant.getProduct();
+        if (!Boolean.TRUE.equals(product.getIsSellable())
+                || (product.getStatus() != null && product.getStatus() != 1)
+                || (variant.getStatus() != null && variant.getStatus() != 1)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Product variant is not sellable");
+        }
+        return new ProductVariantSaleResponse(
+                product.getId(), variant.getId(), product.getStoreId(), product.getProductName(),
+                variant.getVariantName(), variant.getSku(), variant.getBarcode(), product.getCurrencyCode(),
+                product.getSalesChannel(), variant.getCostPrice(), variant.getPosPrice(),
+                variant.getOnlinePrice(), variant.getStatus());
+    }
+
     @Caching(evict = {
             @CacheEvict(cacheNames = CacheNames.PRODUCTS, allEntries = true)
     })
@@ -50,6 +80,7 @@ public class ProductService {
     public Product createProduct(Product product) {
         validateStoreOwnership(product);
         normalizeAndValidateCurrency(product);
+        prepareImages(product);
         prepareVariants(product);
         validateSalesChannelPrices(product);
         Product saved = productRepository.save(product);
@@ -58,38 +89,50 @@ public class ProductService {
 
     /**
      * Keeps the catalog model consistent: a product is never directly sold;
-     * its variants are sold. Products without options receive one default
-     * variant automatically.
+     * its variants are sold. Even a product without options must provide one
+     * default variant containing SKU, barcode and channel prices.
      */
     private void prepareVariants(Product product) {
         List<ProductVariant> variants = product.getVariants();
         if (variants == null || variants.isEmpty()) {
-            ProductVariant defaultVariant = ProductVariant.builder()
-                    .variantName("Default")
-                    .sku(product.getProductCode())
-                    .barcode(product.getBarcode())
-                    .costPrice(product.getCostPrice())
-                    .posPrice(product.getSalePrice())
-                    .status(product.getStatus())
-                    .isDefault(true)
-                    .build();
-            variants = new ArrayList<>(List.of(defaultVariant));
-            product.setVariants(variants);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "At least one product variant is required");
         }
 
-        long defaultVariantCount = variants.stream()
+        List<ProductVariant> activeVariants = variants.stream()
+                .filter(variant -> variant.getStatus() == null || variant.getStatus() == 1)
+                .toList();
+        long defaultVariantCount = activeVariants.stream()
                 .filter(variant -> Boolean.TRUE.equals(variant.getIsDefault()))
                 .count();
         if (defaultVariantCount > 1) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "A product can have only one default variant");
         }
-        if (defaultVariantCount == 0 && variants.size() == 1) {
-            variants.get(0).setIsDefault(true);
+        if (defaultVariantCount == 0 && activeVariants.size() == 1) {
+            activeVariants.get(0).setIsDefault(true);
+        } else if (defaultVariantCount == 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A product with multiple variants must have one default variant");
         }
 
         for (ProductVariant variant : variants) {
+            if (variant.getSku() == null || variant.getSku().isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "SKU is required for each variant");
+            }
+            if (variant.getBarcode() == null || variant.getBarcode().isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Barcode is required for each variant");
+            }
             variant.setProduct(product);
+        }
+    }
+
+    private void prepareImages(Product product) {
+        if (product.getImages() == null) {
+            return;
+        }
+        for (ProductImage image : product.getImages()) {
+            image.setProduct(product);
         }
     }
 
@@ -132,7 +175,11 @@ public class ProductService {
     }
 
     private void validateStoreOwnership(Product product) {
-        if (product.getStoreId() == null || product.getStoreId() <= 0) {
+        validateStoreId(product.getStoreId());
+    }
+
+    private void validateStoreId(Long storeId) {
+        if (storeId == null || storeId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product storeId is required");
         }
     }
@@ -154,7 +201,6 @@ public class ProductService {
             product.setSalesChannel(productDetails.getSalesChannel());
         }
         product.setShortName(productDetails.getShortName());
-        product.setBarcode(productDetails.getBarcode());
         product.setQrCode(productDetails.getQrCode());
         product.setCategory(productDetails.getCategory());
         product.setBrand(productDetails.getBrand());
@@ -162,15 +208,22 @@ public class ProductService {
         product.setTax(productDetails.getTax());
         product.setThumbnail(productDetails.getThumbnail());
         product.setDescription(productDetails.getDescription());
-        product.setCostPrice(productDetails.getCostPrice());
-        product.setSalePrice(productDetails.getSalePrice());
-        product.setWholesalePrice(productDetails.getWholesalePrice());
-        product.setMinPrice(productDetails.getMinPrice());
         product.setWeight(productDetails.getWeight());
         product.setIsFeatured(productDetails.getIsFeatured());
         product.setIsSellable(productDetails.getIsSellable());
         product.setIsStockable(productDetails.getIsStockable());
         product.setStatus(productDetails.getStatus());
+        if (productDetails.getVariants() != null) updateVariants(product, productDetails.getVariants());
+        if (productDetails.getImages() != null) {
+            if (product.getImages() == null) {
+                product.setImages(new ArrayList<>());
+            } else {
+                product.getImages().clear();
+            }
+            product.getImages().addAll(productDetails.getImages());
+            prepareImages(product);
+        }
+        validateSalesChannelPrices(product);
         return productRepository.save(product);
     }
 
@@ -180,9 +233,55 @@ public class ProductService {
     })
     @Transactional
     public void deleteProduct(Long id) {
-        if (!productRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        product.setIsSellable(false);
+        product.setStatus(0);
+        product.getVariants().forEach(variant -> variant.setStatus(0));
+        productRepository.save(product);
+    }
+
+    private void updateVariants(Product product, List<ProductVariant> requestedVariants) {
+        if (requestedVariants.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one product variant is required");
         }
-        productRepository.deleteById(id);
+        List<ProductVariant> existing = product.getVariants() == null ? new ArrayList<>() : product.getVariants();
+        if (product.getVariants() == null) product.setVariants(existing);
+        Map<Long, ProductVariant> existingById = existing.stream().filter(v -> v.getId() != null)
+                .collect(Collectors.toMap(ProductVariant::getId, v -> v));
+        List<Long> requestedIds = requestedVariants.stream().map(ProductVariant::getId)
+                .filter(Objects::nonNull).toList();
+        if (requestedIds.size() != Set.copyOf(requestedIds).size()
+                || !existingById.keySet().containsAll(requestedIds)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Each updated variant ID must belong to this product and be supplied once");
+        }
+        existing.stream().filter(current -> !requestedIds.contains(current.getId()))
+                .forEach(current -> {
+                    current.setStatus(0);
+                    current.setIsDefault(false);
+                });
+        for (ProductVariant requested : requestedVariants) {
+            if (requested.getId() == null) {
+                requested.setProduct(product);
+                existing.add(requested);
+            } else {
+                copyVariant(existingById.get(requested.getId()), requested);
+            }
+        }
+        prepareVariants(product);
+    }
+
+    private void copyVariant(ProductVariant target, ProductVariant source) {
+        target.setVariantName(source.getVariantName());
+        target.setSku(source.getSku());
+        target.setBarcode(source.getBarcode());
+        target.setIsDefault(source.getIsDefault());
+        target.setImage(source.getImage());
+        target.setCostPrice(source.getCostPrice());
+        target.setPosPrice(source.getPosPrice());
+        target.setOnlinePrice(source.getOnlinePrice());
+        target.setStockAlertQty(source.getStockAlertQty());
+        target.setStatus(source.getStatus());
     }
 }
