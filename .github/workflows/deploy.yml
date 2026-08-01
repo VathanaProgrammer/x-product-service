@@ -2,12 +2,14 @@ name: Build and deploy x-product-service
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '.github/workflows/**'
   workflow_dispatch:
 permissions:
   contents: read
   packages: write
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,12 +23,12 @@ jobs:
           server-password: GITHUB_TOKEN
       - uses: actions/checkout@v4
         with:
-          repository: VathanaProgrammer/x-sharedlib
+          repository: sieng-vathana/x-sharedlib
           path: x-sharedlib
       - run: mvn --batch-mode --no-transfer-progress -DskipTests install -f x-sharedlib/pom.xml
       - uses: actions/checkout@v4
         with:
-          repository: VathanaProgrammer/x-redis
+          repository: sieng-vathana/x-redis
           path: x-redis
       - run: mvn --batch-mode --no-transfer-progress -DskipTests install -f x-redis/pom.xml
       - run: mvn --batch-mode --no-transfer-progress -DskipTests package
@@ -40,15 +42,16 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/vathanaprogrammer/x-product-service:main
-            ghcr.io/vathanaprogrammer/x-product-service:${{ github.sha }}
-      - uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.K3S_DEPLOY_HOST }}
-          username: ${{ secrets.K3S_DEPLOY_USER }}
-          key: ${{ secrets.K3S_SSH_KEY }}
-          script: |
-            sudo k3s kubectl -n x-platform create deployment x-product-service --image=ghcr.io/vathanaprogrammer/x-product-service:${{ github.sha }} --dry-run=client -o yaml | sudo k3s kubectl apply -f -
-            sudo k3s kubectl -n x-platform expose deployment x-product-service --port=8080 --target-port=8080 --dry-run=client -o yaml | sudo k3s kubectl apply -f -
-            sudo k3s kubectl -n x-platform set env deployment/x-product-service SERVER_PORT=8080 SPRING_PROFILES_ACTIVE=production SPRING_DATASOURCE_URL=jdbc:mysql://mysql.x-platform.svc.cluster.local:3306/x_prod SPRING_DATA_REDIS_HOST=redis.x-platform.svc.cluster.local SPRING_DATA_REDIS_PORT=6379 --from=secret/x-app-database --from=secret/x-app-auth
-            sudo k3s kubectl -n x-platform rollout status deployment/x-product-service --timeout=180s
+            ghcr.io/sieng-vathana/x-product-service:main
+            ghcr.io/sieng-vathana/x-product-service:${{ github.sha }}
+
+  deploy:
+    needs: build
+    runs-on: [self-hosted, linux, x64, x-platform-deploy]
+    steps:
+      - name: Roll out image
+        run: |
+          sudo k3s kubectl -n x-platform create deployment x-product-service --image=ghcr.io/sieng-vathana/x-product-service:${{ github.sha }} --dry-run=client -o yaml | sudo k3s kubectl apply -f -
+          sudo k3s kubectl -n x-platform expose deployment x-product-service --port=8080 --target-port=8080 --dry-run=client -o yaml | sudo k3s kubectl apply -f -
+          sudo k3s kubectl -n x-platform set env deployment/x-product-service SERVER_PORT=8080 SPRING_PROFILES_ACTIVE=production SPRING_DATASOURCE_URL=jdbc:mysql://mysql.x-platform.svc.cluster.local:3306/x_prod SPRING_DATA_REDIS_HOST=redis.x-platform.svc.cluster.local SPRING_DATA_REDIS_PORT=6379 --from=secret/x-app-database --from=secret/x-app-auth
+          sudo k3s kubectl -n x-platform rollout status deployment/x-product-service --timeout=180s
