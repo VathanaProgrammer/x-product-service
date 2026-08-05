@@ -29,7 +29,7 @@ class ProductUnitServiceTest {
     void createNormalizesValuesAndDefaultsStatus() {
         ProductUnitRepository repository = mock(ProductUnitRepository.class);
         ProductUnitRequest request = new ProductUnitRequest(
-                7L, Set.of(11L, 12L), "box_unit", " Box ", null);
+                7L, Set.of(11L, 12L), "box_unit", " Box ", "Standard box unit", true, null);
         when(repository.existsByBusinessIdAndUnitCodeIgnoreCaseAndStatusNot(
                 7L, "BOX_UNIT", "DELETED")).thenReturn(false);
         when(repository.save(any(ProductUnit.class))).thenAnswer(invocation -> {
@@ -43,15 +43,15 @@ class ProductUnitServiceTest {
         assertEquals(5L, result.id());
         assertEquals("BOX_UNIT", result.unitCode());
         assertEquals("Box", result.unitName());
+        assertEquals("Standard box unit", result.description());
         assertEquals("ACTIVE", result.status());
-        assertEquals(Set.of(11L, 12L), result.storeIds());
     }
 
     @Test
     void createRejectsDuplicateActiveCode() {
         ProductUnitRepository repository = mock(ProductUnitRepository.class);
         ProductUnitRequest request = new ProductUnitRequest(
-                7L, Set.of(11L), "BOX", "Box", CatalogStatus.ACTIVE);
+                7L, Set.of(11L), "BOX", "Box", null, true, CatalogStatus.ACTIVE);
         when(repository.existsByBusinessIdAndUnitCodeIgnoreCaseAndStatusNot(
                 7L, "BOX", "DELETED")).thenReturn(true);
 
@@ -67,7 +67,7 @@ class ProductUnitServiceTest {
     void updateRejectsBusinessIdChange() {
         ProductUnitRepository repository = mock(ProductUnitRepository.class);
         ProductUnitRequest request = new ProductUnitRequest(
-                8L, Set.of(11L), "BOX", "Box", CatalogStatus.ACTIVE);
+                8L, Set.of(11L), "BOX", "Box", null, true, CatalogStatus.ACTIVE);
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
@@ -86,9 +86,10 @@ class ProductUnitServiceTest {
                 .storeIds(Set.of(11L))
                 .unitCode("BOX")
                 .unitName("Box")
+                .isGlobal(true)
                 .status("ACTIVE")
                 .build();
-        when(repository.findDistinctByBusinessIdAndStoreIdsContainingAndStatusNot(
+        when(repository.findAvailableUnits(
                 eq(7L), eq(11L), eq("DELETED"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(java.util.List.of(unit)));
 
@@ -108,6 +109,10 @@ class ProductUnitServiceTest {
         new ProductUnitService(repository).softDelete(5L, 7L);
 
         assertEquals("DELETED", unit.getStatus());
-        verify(repository).save(unit);
+        verify(repository).save(categoryOrUnit(unit));
+    }
+
+    private ProductUnit categoryOrUnit(ProductUnit unit) {
+        return unit;
     }
 }

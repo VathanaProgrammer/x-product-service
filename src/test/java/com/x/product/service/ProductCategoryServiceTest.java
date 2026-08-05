@@ -30,7 +30,7 @@ class ProductCategoryServiceTest {
     void createNormalizesValuesAndDefaultsOptionalFields() {
         ProductCategoryRepository repository = mock(ProductCategoryRepository.class);
         ProductCategoryRequest request = new ProductCategoryRequest(
-                7L, Set.of(11L), "dry_goods", " Dry Goods ", "  ", null, null);
+                7L, Set.of(11L), "dry_goods", " Dry Goods ", "Dry goods category", null, null, false, true, null);
         when(repository.existsByBusinessIdAndCategoryCodeIgnoreCaseAndStatusNot(
                 7L, "DRY_GOODS", "DELETED")).thenReturn(false);
         when(repository.save(any(ProductCategory.class))).thenAnswer(invocation -> {
@@ -44,7 +44,10 @@ class ProductCategoryServiceTest {
         assertEquals(6L, result.id());
         assertEquals("DRY_GOODS", result.categoryCode());
         assertEquals("Dry Goods", result.categoryName());
+        assertEquals("Dry goods category", result.description());
         assertEquals(Integer.valueOf(0), result.sortOrder());
+        assertEquals(Boolean.FALSE, result.isFeatured());
+        assertEquals(Boolean.TRUE, result.isGlobal());
         assertEquals("ACTIVE", result.status());
         assertNull(result.image());
     }
@@ -53,7 +56,7 @@ class ProductCategoryServiceTest {
     void createRejectsDuplicateActiveCode() {
         ProductCategoryRepository repository = mock(ProductCategoryRepository.class);
         ProductCategoryRequest request = new ProductCategoryRequest(
-                7L, Set.of(11L), "DRY", "Dry", null, 1, CatalogStatus.ACTIVE);
+                7L, Set.of(11L), "DRY", "Dry", null, null, 1, false, true, CatalogStatus.ACTIVE);
         when(repository.existsByBusinessIdAndCategoryCodeIgnoreCaseAndStatusNot(
                 7L, "DRY", "DELETED")).thenReturn(true);
 
@@ -88,9 +91,11 @@ class ProductCategoryServiceTest {
                 .categoryCode("DRY")
                 .categoryName("Dry Goods")
                 .sortOrder(1)
+                .isFeatured(false)
+                .isGlobal(true)
                 .status("ACTIVE")
                 .build();
-        when(repository.findDistinctByBusinessIdAndStoreIdsContainingAndStatusNot(
+        when(repository.findAvailableCategories(
                 eq(7L), eq(11L), eq("DELETED"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(java.util.List.of(category)));
 

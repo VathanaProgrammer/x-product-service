@@ -25,5 +25,6 @@ public class ProductImage {
     private String imageUrl;
 
     @Column(name = "is_visible")
+    @Builder.Default
     private Boolean isVisible = true;
 }

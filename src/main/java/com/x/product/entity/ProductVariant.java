@@ -36,6 +36,7 @@ public class ProductVariant {
     private String barcode;
 
     @Column(name = "is_default")
+    @Builder.Default
     private Boolean isDefault = false;
 
     @Column(columnDefinition = "TEXT")

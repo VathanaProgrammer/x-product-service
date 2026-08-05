@@ -81,12 +81,15 @@ public class Product {
     private BigDecimal weight;
 
     @Column(name = "is_featured")
+    @Builder.Default
     private Boolean isFeatured = false;
 
     @Column(name = "is_sellable")
+    @Builder.Default
     private Boolean isSellable = true;
 
     @Column(name = "is_stockable")
+    @Builder.Default
     private Boolean isStockable = true;
 
     private Integer status;
