@@ -31,11 +31,12 @@ public class ProductCategoryService {
             Long businessId, Long storeId, int page, int size) {
         PageRequest pageable = PageRequest.of(
                 page, size,
-                Sort.by("sortOrder").ascending().and(Sort.by("categoryName").ascending()));
+                Sort.by("isFeatured").descending()
+                        .and(Sort.by("sortOrder").ascending())
+                        .and(Sort.by("categoryName").ascending()));
         Page<ProductCategory> result = storeId == null
                 ? categoryRepository.findByBusinessIdAndStatusNot(businessId, DELETED, pageable)
-                : categoryRepository.findDistinctByBusinessIdAndStoreIdsContainingAndStatusNot(
-                        businessId, storeId, DELETED, pageable);
+                : categoryRepository.findAvailableCategories(businessId, storeId, DELETED, pageable);
         return result.map(ProductCategoryResponse::from);
     }
 
@@ -95,18 +96,27 @@ public class ProductCategoryService {
             ProductCategory category,
             ProductCategoryRequest request,
             String normalizedCode) {
+        boolean isGlobal = request.isGlobal() == null || Boolean.TRUE.equals(request.isGlobal());
         category.setCategoryCode(normalizedCode);
         category.setCategoryName(request.categoryName().trim());
+        category.setDescription(trim(request.description()));
         category.setImage(trim(request.image()));
         category.setSortOrder(request.sortOrder() == null ? 0 : request.sortOrder());
-        category.setStoreIds(copyStoreIds(request.storeIds()));
+        category.setIsFeatured(Boolean.TRUE.equals(request.isFeatured()));
+        category.setIsGlobal(isGlobal);
         category.setStatus(status(request.status()));
+
+        if (!isGlobal) {
+            category.setStoreIds(copyStoreIds(request.storeIds()));
+        } else {
+            category.setStoreIds(request.storeIds() != null ? new LinkedHashSet<>(request.storeIds()) : new LinkedHashSet<>());
+        }
     }
 
     private Set<Long> copyStoreIds(Set<Long> storeIds) {
         if (storeIds == null || storeIds.isEmpty()) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "At least one store ID is required");
+                    HttpStatus.BAD_REQUEST, "At least one store ID is required for store-specific categories");
         }
         return new LinkedHashSet<>(storeIds);
     }
