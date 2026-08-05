@@ -2,7 +2,10 @@ package com.x.product.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -18,7 +21,7 @@ public class ProductUnit {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "business_id")
+    @Column(name = "business_id", nullable = false)
     private Long businessId;
 
     @ElementCollection
@@ -27,11 +30,29 @@ public class ProductUnit {
     @Builder.Default
     private Set<Long> storeIds = new HashSet<>();
 
-    @Column(name = "unit_code")
+    @Column(name = "unit_code", nullable = false, length = 50)
     private String unitCode;
 
-    @Column(name = "unit_name")
+    @Column(name = "unit_name", nullable = false, length = 160)
     private String unitName;
 
-    private String status;
+    /**
+     * true  = Shared across ALL stores in this business
+     * false = Restricted to storeIds listed in unit_stores
+     */
+    @Column(name = "is_global", nullable = false)
+    @Builder.Default
+    private Boolean isGlobal = true;
+
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private String status = "ACTIVE";
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private OffsetDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 }

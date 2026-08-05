@@ -32,8 +32,7 @@ public class ProductUnitService {
                 page, size, Sort.by("unitName").ascending());
         Page<ProductUnit> result = storeId == null
                 ? unitRepository.findByBusinessIdAndStatusNot(businessId, DELETED, pageable)
-                : unitRepository.findDistinctByBusinessIdAndStoreIdsContainingAndStatusNot(
-                        businessId, storeId, DELETED, pageable);
+                : unitRepository.findAvailableUnits(businessId, storeId, DELETED, pageable);
         return result.map(ProductUnitResponse::from);
     }
 
@@ -91,16 +90,23 @@ public class ProductUnitService {
 
     private void applyRequest(
             ProductUnit unit, ProductUnitRequest request, String normalizedCode) {
+        boolean isGlobal = request.isGlobal() == null || Boolean.TRUE.equals(request.isGlobal());
         unit.setUnitCode(normalizedCode);
         unit.setUnitName(request.unitName().trim());
-        unit.setStoreIds(copyStoreIds(request.storeIds()));
+        unit.setIsGlobal(isGlobal);
         unit.setStatus(status(request.status()));
+
+        if (!isGlobal) {
+            unit.setStoreIds(copyStoreIds(request.storeIds()));
+        } else {
+            unit.setStoreIds(request.storeIds() != null ? new LinkedHashSet<>(request.storeIds()) : new LinkedHashSet<>());
+        }
     }
 
     private Set<Long> copyStoreIds(Set<Long> storeIds) {
         if (storeIds == null || storeIds.isEmpty()) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "At least one store ID is required");
+                    HttpStatus.BAD_REQUEST, "At least one store ID is required for store-specific units");
         }
         return new LinkedHashSet<>(storeIds);
     }
