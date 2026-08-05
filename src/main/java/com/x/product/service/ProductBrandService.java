@@ -29,11 +29,10 @@ public class ProductBrandService {
     @Transactional(readOnly = true)
     public Page<ProductBrandResponse> list(Long businessId, Long storeId, int page, int size) {
         PageRequest pageable = PageRequest.of(
-                page, size, Sort.by("brandName").ascending());
+                page, size, Sort.by("isFeatured").descending().and(Sort.by("brandName").ascending()));
         Page<ProductBrand> result = storeId == null
                 ? brandRepository.findByBusinessIdAndStatusNot(businessId, DELETED, pageable)
-                : brandRepository.findDistinctByBusinessIdAndStoreIdsContainingAndStatusNot(
-                        businessId, storeId, DELETED, pageable);
+                : brandRepository.findAvailableBrands(businessId, storeId, DELETED, pageable);
         return result.map(ProductBrandResponse::from);
     }
 
@@ -86,16 +85,25 @@ public class ProductBrandService {
     }
 
     private void applyRequest(ProductBrand brand, ProductBrandRequest request, String normalizedCode) {
+        boolean isGlobal = request.isGlobal() == null || Boolean.TRUE.equals(request.isGlobal());
         brand.setBrandCode(normalizedCode);
         brand.setBrandName(request.brandName().trim());
+        brand.setDescription(trim(request.description()));
         brand.setLogo(trim(request.logo()));
-        brand.setStoreIds(copyStoreIds(request.storeIds()));
+        brand.setIsFeatured(Boolean.TRUE.equals(request.isFeatured()));
+        brand.setIsGlobal(isGlobal);
         brand.setStatus(status(request.status()));
+
+        if (!isGlobal) {
+            brand.setStoreIds(copyStoreIds(request.storeIds()));
+        } else {
+            brand.setStoreIds(request.storeIds() != null ? new LinkedHashSet<>(request.storeIds()) : new LinkedHashSet<>());
+        }
     }
 
     private Set<Long> copyStoreIds(Set<Long> storeIds) {
         if (storeIds == null || storeIds.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one store ID is required");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one store ID is required for store-specific brands");
         }
         return new LinkedHashSet<>(storeIds);
     }

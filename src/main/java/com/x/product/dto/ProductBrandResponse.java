@@ -2,6 +2,7 @@ package com.x.product.dto;
 
 import com.x.product.entity.ProductBrand;
 
+import java.time.OffsetDateTime;
 import java.util.Set;
 
 public record ProductBrandResponse(
@@ -10,15 +11,29 @@ public record ProductBrandResponse(
         Set<Long> storeIds,
         String brandCode,
         String brandName,
+        String description,
         String logo,
-        String status) {
+        Boolean isFeatured,
+        Boolean isGlobal,
+        String status,
+        OffsetDateTime createdAt,
+        OffsetDateTime updatedAt) {
 
     public static ProductBrandResponse from(ProductBrand brand) {
         Set<Long> stores = brand.getStoreIds() == null
                 ? Set.of() : Set.copyOf(brand.getStoreIds());
         return new ProductBrandResponse(
-                brand.getId(), brand.getBusinessId(), stores,
-                brand.getBrandCode(), brand.getBrandName(),
-                brand.getLogo(), brand.getStatus());
+                brand.getId(),
+                brand.getBusinessId(),
+                stores,
+                brand.getBrandCode(),
+                brand.getBrandName(),
+                brand.getDescription(),
+                brand.getLogo(),
+                brand.getIsFeatured(),
+                brand.getIsGlobal(),
+                brand.getStatus(),
+                brand.getCreatedAt(),
+                brand.getUpdatedAt());
     }
 }

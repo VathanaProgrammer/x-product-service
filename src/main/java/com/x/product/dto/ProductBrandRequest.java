@@ -12,6 +12,9 @@ public record ProductBrandRequest(
         Set<Long> storeIds,
         @NotBlank @Size(max = 50) String brandCode,
         @NotBlank @Size(max = 100) String brandName,
+        String description,
         String logo,
+        Boolean isFeatured,
+        Boolean isGlobal,
         CatalogStatus status) {
 }
