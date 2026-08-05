@@ -15,6 +15,7 @@ public record ProductUnitRequest(
         @Pattern(regexp = "[A-Za-z0-9_-]+", message = "must contain only letters, numbers, hyphens, and underscores")
         String unitCode,
         @NotBlank @Size(max = 160) String unitName,
+        String description,
         Boolean isGlobal,
         CatalogStatus status) {
 }

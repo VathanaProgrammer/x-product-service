@@ -12,6 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.LinkedHashSet;
@@ -93,6 +94,7 @@ public class ProductUnitService {
         boolean isGlobal = request.isGlobal() == null || Boolean.TRUE.equals(request.isGlobal());
         unit.setUnitCode(normalizedCode);
         unit.setUnitName(request.unitName().trim());
+        unit.setDescription(trim(request.description()));
         unit.setIsGlobal(isGlobal);
         unit.setStatus(status(request.status()));
 
@@ -117,6 +119,10 @@ public class ProductUnitService {
 
     private String status(CatalogStatus status) {
         return (status == null ? CatalogStatus.ACTIVE : status).name();
+    }
+
+    private String trim(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 
     private void validateBusinessId(Long expected, Long requested) {

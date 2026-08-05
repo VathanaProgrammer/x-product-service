@@ -36,6 +36,9 @@ public class ProductUnit {
     @Column(name = "unit_name", nullable = false, length = 160)
     private String unitName;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     /**
      * true  = Shared across ALL stores in this business
      * false = Restricted to storeIds listed in unit_stores
