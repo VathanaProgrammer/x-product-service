@@ -5,6 +5,7 @@ import com.x.product.entity.ProductSaleChannel;
 import com.x.product.entity.ProductVariant;
 import com.x.product.repository.ProductRepository;
 import com.x.product.repository.ProductVariantRepository;
+import com.x.product.repository.SupplierRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,7 +24,7 @@ class ProductServiceTest {
     void getProductByIdReturnsNotFoundWhenProductDoesNotExist() {
         ProductRepository repository = mock(ProductRepository.class);
         when(repository.findById(99L)).thenReturn(Optional.empty());
-        ProductService service = new ProductService(repository, mock(ProductVariantRepository.class));
+        ProductService service = new ProductService(repository, mock(ProductVariantRepository.class), mock(SupplierRepository.class));
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
@@ -44,7 +45,7 @@ class ProductServiceTest {
                 .build();
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> new ProductService(repository, mock(ProductVariantRepository.class)).createProduct(product));
+                () -> new ProductService(repository, mock(ProductVariantRepository.class), mock(SupplierRepository.class)).createProduct(product));
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
     }
 
@@ -66,7 +67,7 @@ class ProductServiceTest {
                 .build();
         when(repository.save(product)).thenReturn(product);
 
-        new ProductService(repository, mock(ProductVariantRepository.class)).createProduct(product);
+        new ProductService(repository, mock(ProductVariantRepository.class), mock(SupplierRepository.class)).createProduct(product);
 
         assertEquals(true, variant.getIsDefault());
         assertEquals(product, variant.getProduct());
@@ -83,7 +84,7 @@ class ProductServiceTest {
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> new ProductService(repository, mock(ProductVariantRepository.class)).createProduct(product));
+                () -> new ProductService(repository, mock(ProductVariantRepository.class), mock(SupplierRepository.class)).createProduct(product));
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
     }
@@ -102,7 +103,7 @@ class ProductServiceTest {
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> new ProductService(repository, mock(ProductVariantRepository.class)).createProduct(product));
+                () -> new ProductService(repository, mock(ProductVariantRepository.class), mock(SupplierRepository.class)).createProduct(product));
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
     }
