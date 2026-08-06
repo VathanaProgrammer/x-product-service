@@ -6,6 +6,7 @@ import com.x.product.entity.ProductVariant;
 import com.x.product.entity.ProductImage;
 import com.x.product.repository.ProductRepository;
 import com.x.product.repository.ProductVariantRepository;
+import com.x.product.repository.SupplierRepository;
 import com.x.product.dto.ProductVariantSaleResponse;
 import com.x.redis.cache.CacheNames;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 public class ProductService {
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final SupplierRepository supplierRepository;
 
     /**
      * List cache — short TTL. Evicted on any product write.
@@ -122,6 +124,11 @@ public class ProductService {
             }
             if (variant.getBarcode() == null || variant.getBarcode().isBlank()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Barcode is required for each variant");
+            }
+            if (variant.getSupplier() != null) {
+                if (variant.getSupplier().getId() == null || !supplierRepository.existsById(variant.getSupplier().getId())) {
+                    variant.setSupplier(null);
+                }
             }
             variant.setProduct(product);
         }
