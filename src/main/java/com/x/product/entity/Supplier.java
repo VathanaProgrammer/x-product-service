@@ -29,7 +29,7 @@ public class Supplier {
     @Column(name = "business_id", nullable = false)
     private Long businessId;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "supplier_stores", joinColumns = @JoinColumn(name = "supplier_id"))
     @Column(name = "store_id")
     @Builder.Default

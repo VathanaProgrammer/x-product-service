@@ -27,7 +27,7 @@ public class ProductUnit {
     @Column(name = "business_id", nullable = false)
     private Long businessId;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "unit_stores", joinColumns = @JoinColumn(name = "unit_id"))
     @Column(name = "store_id")
     @Builder.Default

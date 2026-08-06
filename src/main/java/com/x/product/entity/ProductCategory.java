@@ -29,7 +29,7 @@ public class ProductCategory {
     @Column(name = "business_id", nullable = false)
     private Long businessId;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "category_stores", joinColumns = @JoinColumn(name = "category_id"))
     @Column(name = "store_id")
     @Builder.Default

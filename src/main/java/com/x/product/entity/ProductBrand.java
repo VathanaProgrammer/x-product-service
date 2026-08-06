@@ -56,7 +56,7 @@ public class ProductBrand {
     @Builder.Default
     private String status = "ACTIVE";
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "brand_stores", joinColumns = @JoinColumn(name = "brand_id"))
     @Column(name = "store_id")
     @Builder.Default

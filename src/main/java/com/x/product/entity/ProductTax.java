@@ -28,7 +28,7 @@ public class ProductTax {
     @Column(name = "business_id", nullable = false)
     private Long businessId;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "tax_stores", joinColumns = @JoinColumn(name = "tax_id"))
     @Column(name = "store_id")
     @Builder.Default
