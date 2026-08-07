@@ -289,6 +289,7 @@ public class ProductService {
         target.setPosPrice(source.getPosPrice());
         target.setOnlinePrice(source.getOnlinePrice());
         target.setStockAlertQty(source.getStockAlertQty());
+        target.setQuantity(source.getQuantity());
         target.setStatus(source.getStatus());
     }
 }

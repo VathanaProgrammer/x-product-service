@@ -65,6 +65,9 @@ public class ProductVariant {
     @Column(name = "stock_alert_qty")
     private Integer stockAlertQty;
 
+    @Column(name = "quantity")
+    private Integer quantity;
+
     private Integer status;
 
     @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
